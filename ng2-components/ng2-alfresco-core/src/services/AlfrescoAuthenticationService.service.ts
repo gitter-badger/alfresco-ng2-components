@@ -28,21 +28,20 @@ declare let AlfrescoApi: any;
 @Injectable()
 export class AlfrescoAuthenticationService {
 
-    private _authUrl: string = '/alfresco/api/-default-/public/authentication/versions/1';
+    alfrescoApi: any;
 
     /**
      * Constructor
      * @param alfrescoSettingsService
      */
     constructor(private alfrescoSettingsService: AlfrescoSettingsService) {
+        this.alfrescoApi = new AlfrescoApi({
+            host: this.getBaseUrl()
+        });
     }
 
     getBaseUrl(): string {
-        return this.alfrescoSettingsService.host + this._authUrl;
-    }
-
-    private getAlfrescoClient() {
-        return AlfrescoApi.getClientWithTicket(this.getBaseUrl(), this.getToken());
+        return this.alfrescoSettingsService.host;
     }
 
     /**
@@ -50,7 +49,7 @@ export class AlfrescoAuthenticationService {
      * @returns {boolean}
      */
     isLoggedIn(): boolean {
-        return !!localStorage.getItem('token');
+        return this.alfrescoApi.isLoggedIn();
     }
 
     /**
@@ -59,86 +58,33 @@ export class AlfrescoAuthenticationService {
      * @param password
      * @returns {Observable<R>|Observable<T>}
      */
-    login(username: string, password: string): Observable<string> {
-        return this.loginPost(username, password);
-    }
+    login(username: string, password: string) {
+        this.alfrescoApi.changeConfig({
+            username: username,
+            password: password,
+            host: this.getBaseUrl()
+        });
 
-    /**
-     * Perform a login on behalf of the user and store the ticket returned
-     *
-     * @param username
-     * @param password
-     * @returns {Observable<R>|Observable<T>}
-     */
-    loginPost(username: string, password: string) {
-        return Observable.fromPromise(this.getCreateTicketPromise(username, password))
+        return Observable.fromPromise(this.alfrescoApi.login(username, password))
             .map(res => <any> res)
             .do(response => {
-                this.saveToken(response.entry.id);
-                return this.getToken();
+                return response;
             })
             .catch(this.handleError);
-    }
-
-    getCreateTicketPromise(username: string, password: string) {
-        let apiInstance = new AlfrescoApi.Auth.AuthenticationApi(this.getAlfrescoClient());
-        let loginRequest = new AlfrescoApi.Auth.LoginRequest();
-        loginRequest.userId = username;
-        loginRequest.password = password;
-        return apiInstance.createTicket(loginRequest);
-    }
-
-    /**
-     * Delete the current login ticket from the server
-     *
-     * @returns {Observable<R>|Observable<T>}
-     */
-    loginDelete() {
-        return Observable.fromPromise(this.getDeleteTicketPromise())
-            .map(res => <any> res)
-            .do(response => {
-                this.removeToken();
-                this.saveToken('');
-            })
-            .catch(this.handleError);
-    }
-
-    getDeleteTicketPromise() {
-        let apiInstance = new AlfrescoApi.Auth.AuthenticationApi(this.getAlfrescoClient());
-        return apiInstance.deleteTicket();
-    }
-
-    /**
-     * Return the token stored in the localStorage
-     * @param token
-     */
-    public getToken (): string {
-        return localStorage.getItem('token');
-    }
-
-    /**
-     * The method save the toke in the localStorage
-     * @param token
-     */
-    public saveToken(token): void {
-        if (token) {
-            localStorage.setItem('token', token);
-        }
-    }
-
-    /**
-     * Remove the login token from localStorage
-     */
-    public removeToken(): void {
-        localStorage.removeItem('token');
     }
 
     /**
      * The method remove the token from the local storage
      * @returns {Observable<T>}
+     * @returns {Observable<T>do}
      */
     public logout() {
-        return this.loginDelete();
+        return Observable.fromPromise(this.alfrescoApi.logout())
+            .map(res => <any> res)
+            .do(response => {
+                return response;
+            })
+            .catch(this.handleError);
     }
 
     /**

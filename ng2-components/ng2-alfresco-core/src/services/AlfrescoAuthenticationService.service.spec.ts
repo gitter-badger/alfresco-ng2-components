@@ -17,95 +17,51 @@
 
 import { it, describe, beforeEach } from '@angular/core/testing';
 import { ReflectiveInjector } from '@angular/core';
-import { AlfrescoSettingsService } from './AlfrescoSettingsService.service';
 import { AlfrescoAuthenticationService } from './AlfrescoAuthenticationService.service';
+import { AlfrescoSettingsService } from './AlfrescoSettingsService.service';
 
 declare var AlfrescoApi: any;
 
 describe('AlfrescoAuthentication', () => {
-    let injector,
-        service;
+
+    let authService;
 
     beforeEach(() => {
-        injector = ReflectiveInjector.resolveAndCreate([
+        this.injector = ReflectiveInjector.resolveAndCreate([
             AlfrescoAuthenticationService,
             AlfrescoSettingsService
         ]);
 
-        let store = {};
-
-        spyOn(localStorage, 'getItem').and.callFake(function (key) {
-            return store[key];
-        });
-        spyOn(localStorage, 'setItem').and.callFake(function (key, value) {
-            return store[key] = value + '';
-        });
-        spyOn(localStorage, 'clear').and.callFake(function () {
-            store = {};
-        });
-        spyOn(localStorage, 'removeItem').and.callFake(function (key) {
-            delete store[key];
-        });
-        spyOn(localStorage, 'key').and.callFake(function (i) {
-            let keys = Object.keys(store);
-            return keys[i] || null;
-        });
-
-        service = injector.get(AlfrescoAuthenticationService);
+        authService = this.injector.get(AlfrescoAuthenticationService);
     });
 
-    it('should return true and token if the user is logged in', () => {
-        service.saveToken('fake-local-token');
-        expect(service.isLoggedIn()).toBe(true);
-        expect(localStorage.getItem('token')).toBeDefined();
-        expect(localStorage.getItem('token')).toEqual('fake-local-token');
+    it('test AlfrescoAuthenticationService', () => {
+        expect(authService instanceof AlfrescoAuthenticationService).toBe(true);
     });
 
-    it('should return false and token undefined if the user is not logged in', () => {
-        expect(service.isLoggedIn()).toEqual(false);
-        expect(localStorage.getItem('token')).not.toBeDefined();
-
+    it('should return false if the user is not logged in', () => {
+        expect(authService.isLoggedIn()).toEqual(false);
     });
 
-    it('should return true and token on sign in', () => {
-
-        let p = new Promise(function (resolve, reject) {
-            resolve({
-                entry: {
-                    userId: 'fake-username',
-                    id: 'fake-post-token'
-                }
-            });
-        });
-        spyOn(service, 'getCreateTicketPromise').and.returnValue(p);
-
-        service.token = '';
-        service.login('fake-username', 'fake-password')
+    it('isLoggedIn should return true after login', (done) => {
+        authService.login('admin', 'admin')
             .subscribe(() => {
-                    expect(service.isLoggedIn()).toBe(true);
-                    expect(service.getToken()).toEqual('fake-post-token');
-                    expect(localStorage.getItem('token')).toBeDefined();
-                    expect(localStorage.getItem('token')).toEqual('fake-post-token');
+                    expect(authService.isLoggedIn()).toEqual(true);
+                    done();
                 }
             );
     });
 
-    it('should return false and token undefined on log out', () => {
-
-        let p = new Promise(function (resolve, reject) {
-            resolve();
-        });
-
-        spyOn(service, 'getDeleteTicketPromise').and.returnValue(p);
-
-        localStorage.setItem('token', 'fake-token');
-        service.logout()
+    it('isLoggedIn should return false after log out', (done) => {
+        authService.login('admin', 'admin')
             .subscribe(() => {
-                    expect(service.isLoggedIn()).toBe(false);
-                    expect(service.getToken()).toBeUndefined();
-                    expect(localStorage.getItem('token')).toBeUndefined();
+                    authService.logout()
+                        .subscribe(() => {
+                                expect(authService.isLoggedIn()).toEqual(false);
+                                done();
+                            }
+                        );
                 }
             );
     });
-
 });
