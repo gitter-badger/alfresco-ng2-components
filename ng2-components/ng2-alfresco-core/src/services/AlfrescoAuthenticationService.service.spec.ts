@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { it, describe, beforeEach } from '@angular/core/testing';
+import { describe, expect, beforeEach, it, async, inject } from '@angular/core/testing';
 import { ReflectiveInjector } from '@angular/core';
 import { AlfrescoAuthenticationService } from './AlfrescoAuthenticationService.service';
 import { AlfrescoSettingsService } from './AlfrescoSettingsService.service';
-
+import { AlfrescoApiMock } from  '../assets/AlfrescoApi.mock';
 declare var AlfrescoApi: any;
 
 describe('AlfrescoAuthentication', () => {
@@ -43,22 +43,25 @@ describe('AlfrescoAuthentication', () => {
         expect(authService.isLoggedIn()).toEqual(false);
     });
 
-    it('isLoggedIn should return true after login', (done) => {
-        authService.login('admin', 'admin')
-            .subscribe(() => {
-                    expect(authService.isLoggedIn()).toEqual(true);
-                    done();
-                }
-            );
-    });
+    it('should return the ticket after login', async(inject([],
+        () => {
+            authService.alfrescoApi = new AlfrescoApiMock();
 
-    it('isLoggedIn should return false after log out', (done) => {
+            authService.login('admin', 'admin')
+                .subscribe((data) => {
+                    expect(data).toEqual('TICKET_4479f4d3bb155195879bfbb8d5206f433488a1b1');
+                });
+        })
+    ));
+
+    it('should be resolver the subdcriberafter log out', () => {
+        authService.alfrescoApi = new AlfrescoApiMock();
+
         authService.login('admin', 'admin')
             .subscribe(() => {
                     authService.logout()
-                        .subscribe(() => {
-                                expect(authService.isLoggedIn()).toEqual(false);
-                                done();
+                        .subscribe((data) => {
+                                expect(data).toEqual('logout');
                             }
                         );
                 }
