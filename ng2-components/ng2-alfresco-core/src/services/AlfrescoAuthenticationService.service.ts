@@ -44,6 +44,10 @@ export class AlfrescoAuthenticationService {
         return this.alfrescoSettingsService.host;
     }
 
+    getAlfrescoApi(): any {
+        return this.alfrescoApi;
+    }
+
     /**
      * The method return tru if the user is logged in
      * @returns {boolean}
